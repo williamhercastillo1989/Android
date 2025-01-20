@@ -5,8 +5,6 @@ import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.animateDp
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -36,7 +34,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -49,20 +46,19 @@ import coil.compose.rememberAsyncImagePainter
 import com.example.pokedex2024.R
 import com.example.pokedex2024.components.PokedexText
 import com.example.pokedex2024.components.paletteBackgroundBrush
-import com.example.pokedex2024.ui.theme.Pokedex2024Theme
+import com.example.pokedex2024.utils.Transitions.LocalNavAnimatedVisibilityScope
+import com.example.pokedex2024.utils.Transitions.LocalSharedTransitionScope
 import com.example.pokedex2024.utils.Transitions.ParentClip
 import com.example.pokedex2024.utils.Transitions.boundsTransform
-import com.example.pokedex2024.utils.Transitions.snackDetailBoundsTransform
 import com.example.pokedex2024.viewModel.PokemonViewModel
 
-@OptIn(ExperimentalSharedTransitionApi::class)
+
 @Composable
-fun SharedTransitionScope.PokedexDetails(
+fun PokedexDetailsView(
     viewModel: PokemonViewModel,
     navController: NavController,
     name: String?,
-    imgUrl: String?,
-    animatedVisibilityScope: AnimatedVisibilityScope
+    imgUrl: String?
 ) {
     Column(
         modifier = Modifier
@@ -70,21 +66,26 @@ fun SharedTransitionScope.PokedexDetails(
             .verticalScroll(rememberScrollState())
             .testTag("PokedexDetails"),
     ) {
-        DetailsHeader(name, imgUrl, navController, animatedVisibilityScope)
+        DetailsHeader(name, imgUrl, navController)
     }
 }
 
+
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-private fun SharedTransitionScope.DetailsHeader(
+fun DetailsHeader(
     name: String?,
     imgUrl: String?,
-    navController: NavController,
-    animatedVisibilityScope: AnimatedVisibilityScope
+    navController: NavController
 ) {
 
     var palette by remember { mutableStateOf<Palette?>(null) }
     val backgroundBrush by palette.paletteBackgroundBrush()
+
+    val sharedTransitionScope = LocalSharedTransitionScope.current
+        ?: throw IllegalStateException("No Scope found")
+    val animatedVisibilityScope = LocalNavAnimatedVisibilityScope.current
+        ?: throw IllegalStateException("No Scope found")
 
     val roundedCornerAnimation by animatedVisibilityScope.transition
         .animateDp(label = "rounded corner") { enterExit: EnterExitState ->
@@ -101,6 +102,7 @@ private fun SharedTransitionScope.DetailsHeader(
         bottomStart = 64.dp,
         bottomEnd = 64.dp,
     )
+    with(sharedTransitionScope) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -154,7 +156,6 @@ private fun SharedTransitionScope.DetailsHeader(
 
             val imagePokemon = rememberAsyncImagePainter(model = imgUrl)
 
-
             Image(
                 painter = imagePokemon,
                 contentDescription = null,
@@ -167,14 +168,14 @@ private fun SharedTransitionScope.DetailsHeader(
                         state = rememberSharedContentState(key = "image-${name}"),
                         animatedVisibilityScope = animatedVisibilityScope,
                         boundsTransform = boundsTransform,
-                        placeHolderSize =  SharedTransitionScope.PlaceHolderSize.contentSize,
+                        placeHolderSize = SharedTransitionScope.PlaceHolderSize.contentSize,
                         renderInOverlayDuringTransition = true,
                         zIndexInOverlay = 0f,
                         clipInOverlayDuringTransition = ParentClip
                     )
             )
-
         }
+
         PokedexText(
             modifier = Modifier
                 .padding(top = 24.dp)
@@ -183,11 +184,12 @@ private fun SharedTransitionScope.DetailsHeader(
                     state = rememberSharedContentState(key = "name-${name}"),
                     animatedVisibilityScope = animatedVisibilityScope,
                     boundsTransform = boundsTransform,
-                    placeHolderSize =  SharedTransitionScope.PlaceHolderSize.contentSize,
+                    placeHolderSize = SharedTransitionScope.PlaceHolderSize.contentSize,
                     renderInOverlayDuringTransition = true,
                     zIndexInOverlay = 0f,
                     clipInOverlayDuringTransition = ParentClip
                 ),
+
             text = name!!,
             previewText = "skydoves",
             color = Color.Black,
@@ -195,5 +197,5 @@ private fun SharedTransitionScope.DetailsHeader(
             textAlign = TextAlign.Center,
             fontSize = 36.sp,
         )
-
+    }
 }

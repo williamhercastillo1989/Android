@@ -41,7 +41,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.palette.graphics.Palette
-import com.example.pokedex2024.utils.Constants.Companion.CUSTOM_BLACK
+import com.example.pokedex2024.utils.Constants.Companion.CUSTOM_TOP_BAR
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,7 +49,7 @@ fun MainTopBar(title: String, showBackButton: Boolean = false, onClickBackButton
     TopAppBar(
         title = { Text(text = title, color = Color.White, fontWeight = FontWeight.Bold,fontSize = 18.sp) },
         colors = TopAppBarDefaults.mediumTopAppBarColors(
-            containerColor = Color(CUSTOM_BLACK)
+            containerColor = Color(CUSTOM_TOP_BAR)
         ),
         navigationIcon = {
             if (showBackButton) {
@@ -64,6 +64,7 @@ fun MainTopBar(title: String, showBackButton: Boolean = false, onClickBackButton
         }
     )
 }
+
 
 @Composable
 fun Loader(){

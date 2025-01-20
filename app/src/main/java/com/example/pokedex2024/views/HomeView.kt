@@ -1,16 +1,11 @@
 package com.example.pokedex2024.views
-
-
 import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.core.animateDp
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,116 +14,130 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.paging.LoadState
+import androidx.paging.compose.LazyPagingItems
 import coil.compose.rememberAsyncImagePainter
-import com.example.pokedex2024.components.Loader
 import com.example.pokedex2024.components.MainTopBar
 import com.example.pokedex2024.components.PokedexText
 import com.example.pokedex2024.model.Pokemon
+import com.example.pokedex2024.utils.Transitions.LocalNavAnimatedVisibilityScope
+import com.example.pokedex2024.utils.Transitions.LocalSharedTransitionScope
 import com.example.pokedex2024.utils.Transitions.ParentClip
 import com.example.pokedex2024.utils.Transitions.boundsTransform
 import com.example.pokedex2024.utils.Transitions.snackDetailBoundsTransform
 import com.example.pokedex2024.viewModel.PokemonViewModel
+import androidx.paging.compose.collectAsLazyPagingItems
+import com.example.pokedex2024.components.Loader
 
 
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun SharedTransitionScope.HomeView(
-    viewModel: PokemonViewModel,
-    navController: NavController,
-    animatedVisibilityScope: AnimatedVisibilityScope
+fun HomeView(
+    viewModel: PokemonViewModel, navController: NavController
 ) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        MainTopBar(title = "Pokédex Compose", onClickBackButton = {}) {}
 
+    Scaffold(
+        topBar = {
+            MainTopBar(title = "Pokédex Compose", onClickBackButton = {}) {}
+        }
+    ) {
         ContentHome(
-            viewModel = viewModel,
-            navController = navController,
-            animatedVisibilityScope
+            viewModel = viewModel, it , navController = navController
         )
-
     }
 }
 
 
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun SharedTransitionScope.ContentHome(
-    viewModel: PokemonViewModel,
-    navController: NavController,
-    animatedVisibilityScope: AnimatedVisibilityScope,
+fun ContentHome(
+    viewModel: PokemonViewModel, pad:PaddingValues,  navController: NavController
 ) {
+    val pokemonPage = viewModel.pokemonPage.collectAsLazyPagingItems()
+    Box(
+        modifier = Modifier.fillMaxSize().padding(pad)
+    ) {
+        when {
+            //Carga inicial
+            pokemonPage.loadState.refresh is LoadState.Loading && pokemonPage.itemCount == 0 -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
+                ) {
+                    Loader()
+                }
+            }
 
-    val homeScreenUiState by viewModel.pokemonFlow.collectAsState()
+            //Estado vacio
+            pokemonPage.loadState.refresh is LoadState.NotLoading && pokemonPage.itemCount == 0 -> {
 
-    when (homeScreenUiState) {
-        is UiState.Error -> {}
-        UiState.Loading -> {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Loader()
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .background(Color.White),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = "no existen pokemones")
+                }
+
+            }
+
+            pokemonPage.loadState.hasError -> {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .background(Color.Red),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = "Ha ocurrido un error")
+                }
+            }
+
+            else -> {
+                PokedexList(pokemonPage, navController)
+
+                if (pokemonPage.loadState.append is LoadState.Loading) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Loader()
+                    }
+                }
             }
 
         }
-
-        is UiState.Success -> {
-            PokedexList(
-                (homeScreenUiState as UiState.Success).data,
-                animatedVisibilityScope,
-                homeScreenUiState,
-                navController
-            )
-        }
     }
 }
 
 
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun SharedTransitionScope.PokedexList(
-    pokemonList: List<Pokemon>,
-    animatedVisibilityScope: AnimatedVisibilityScope,
-    uiState: UiState,
-    navController: NavController
+fun PokedexList(
+    pokemonList: LazyPagingItems<Pokemon>, navController: NavController
 ) {
     LazyVerticalGrid(
         modifier = Modifier.testTag("PokedexList"),
         columns = GridCells.Fixed(2),
         contentPadding = PaddingValues(6.dp)
     ) {
-        val threadHold = 8
-        itemsIndexed(items = pokemonList, key = { _, pokemon -> pokemon.name }) { index, pokemon ->
-            if ((index + threadHold) >= pokemonList.size && uiState != UiState.Loading) {
-                //fetchNextPokemonList()
-            }
-            CardPokemon(
-                pokemon,
-                { navController.navigate("PokedexDetails/${pokemon.namePokemon}/?${pokemon.imageUrl}") },
-                animatedVisibilityScope
-            )
+        items(pokemonList.itemCount) { index ->
+            val item = pokemonList[index]
+            if (item != null) {
+                CardPokemon(
+                    item
+                ) { navController.navigate("PokedexDetailsView/${item.namePokemon}/?${item.imageUrl}") }
 
+            }
         }
     }
 }
@@ -136,20 +145,14 @@ fun SharedTransitionScope.PokedexList(
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun SharedTransitionScope.CardPokemon(
-    pokemon: Pokemon,
-    onClick: () -> Unit, animatedVisibilityScope: AnimatedVisibilityScope,
+fun CardPokemon(
+    pokemon: Pokemon, onClick: () -> Unit
 ) {
 
-    val roundedCornerAnimation by animatedVisibilityScope.transition
-        .animateDp(label = "rounded corner") { enterExit: EnterExitState ->
-            when (enterExit) {
-                EnterExitState.PreEnter -> 0.dp
-                EnterExitState.Visible -> 20.dp
-                EnterExitState.PostExit -> 20.dp
-            }
-        }
-
+    val sharedTransitionScope =
+        LocalSharedTransitionScope.current ?: throw IllegalStateException("No Scope found")
+    val animatedVisibilityScope =
+        LocalNavAnimatedVisibilityScope.current ?: throw IllegalStateException("No Scope found")
 
     Card(
         modifier = Modifier
@@ -160,45 +163,48 @@ fun SharedTransitionScope.CardPokemon(
         shape = RoundedCornerShape(14.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
     ) {
-        Column {
-            MainImage(
-                image = pokemon.imageUrl,
-                pokemon.namePokemon,
-                animatedVisibilityScope,
-                Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .padding(top = 20.dp)
-                    .size(120.dp).sharedElement(
-                        state = rememberSharedContentState(key = "image-${pokemon.name}"),
-                        animatedVisibilityScope = animatedVisibilityScope,
-                        boundsTransform = boundsTransform,
-                        placeHolderSize =  SharedTransitionScope.PlaceHolderSize.contentSize,
-                        renderInOverlayDuringTransition = true,
-                        zIndexInOverlay = 0f,
-                        clipInOverlayDuringTransition = ParentClip
-                    )
-            )
-            PokedexText(
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .fillMaxWidth()
-                    .padding(12.dp)
-                    .sharedElement(
-                        state = rememberSharedContentState(key = "name-${pokemon.namePokemon}"),
-                        animatedVisibilityScope = animatedVisibilityScope,
-                        boundsTransform = boundsTransform,
-                        placeHolderSize =  SharedTransitionScope.PlaceHolderSize.contentSize,
-                        renderInOverlayDuringTransition = true,
-                        zIndexInOverlay = 0f,
-                        clipInOverlayDuringTransition = ParentClip
-                    ),
+        with(sharedTransitionScope) {
+            Column {
+                MainImage(
+                    image = pokemon.imageUrl,
+                    pokemon.namePokemon,
+                    animatedVisibilityScope,
+                    Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .padding(top = 20.dp)
+                        .size(120.dp)
+                        .sharedElement(
+                            state = rememberSharedContentState(key = "image-${pokemon.name}"),
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            boundsTransform = boundsTransform,
+                            placeHolderSize = SharedTransitionScope.PlaceHolderSize.contentSize,
+                            renderInOverlayDuringTransition = true,
+                            zIndexInOverlay = 0f,
+                            clipInOverlayDuringTransition = ParentClip
+                        )
+                )
+                PokedexText(
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .fillMaxWidth()
+                        .padding(12.dp)
+                        .sharedElement(
+                            state = rememberSharedContentState(key = "name-${pokemon.namePokemon}"),
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            boundsTransform = boundsTransform,
+                            placeHolderSize = SharedTransitionScope.PlaceHolderSize.contentSize,
+                            renderInOverlayDuringTransition = true,
+                            zIndexInOverlay = 0f,
+                            clipInOverlayDuringTransition = ParentClip
+                        ),
 
-                text = pokemon.namePokemon,
-                color = Color.Black,
-                textAlign = TextAlign.Center,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-            )
+                    text = pokemon.namePokemon,
+                    color = Color.Black,
+                    textAlign = TextAlign.Center,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
         }
     }
 
@@ -220,17 +226,16 @@ fun SharedTransitionScope.MainImage(
         painter = imagePokemon,
         contentDescription = null,
         contentScale = ContentScale.Crop,
-        modifier = modifier
-            .sharedElement(
-                state = rememberSharedContentState(key = "image-${namePokemon}"),
-                animatedVisibilityScope = animatedVisibilityScope,
-                boundsTransform = snackDetailBoundsTransform,
-                placeHolderSize = SharedTransitionScope.PlaceHolderSize.contentSize,
-                renderInOverlayDuringTransition = true,
-                zIndexInOverlay =  0f,
-                clipInOverlayDuringTransition =  ParentClip
+        modifier = modifier.sharedElement(
+            state = rememberSharedContentState(key = "image-${namePokemon}"),
+            animatedVisibilityScope = animatedVisibilityScope,
+            boundsTransform = snackDetailBoundsTransform,
+            placeHolderSize = SharedTransitionScope.PlaceHolderSize.contentSize,
+            renderInOverlayDuringTransition = true,
+            zIndexInOverlay = 0f,
+            clipInOverlayDuringTransition = ParentClip
 
-            )
+        )
     )
 }
 

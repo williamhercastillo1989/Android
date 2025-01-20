@@ -24,6 +24,12 @@ object Transitions {
         stiffness = 380f
     )
 
+    fun <T> nonSpatialExpressiveSpring() = spring<T>(
+        dampingRatio = 1f,
+        stiffness = 1600f
+    )
+
+
     val boundsTransform = { _: Rect, _: Rect -> tween<Rect>(550) }
 
     @OptIn(ExperimentalSharedTransitionApi::class)

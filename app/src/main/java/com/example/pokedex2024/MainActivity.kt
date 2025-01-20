@@ -15,21 +15,24 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import com.example.pokedex2024.navigation.NavManager
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.example.pokedex2024.navigation.composableWithCompositionLocal
 import com.example.pokedex2024.ui.theme.Pokedex2024Theme
+import com.example.pokedex2024.utils.Transitions.LocalSharedTransitionScope
 import com.example.pokedex2024.viewModel.PokemonViewModel
+import com.example.pokedex2024.views.HomeView
+import com.example.pokedex2024.views.PokedexDetailsView
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -41,35 +44,52 @@ class MainActivity : ComponentActivity() {
         val viewModel: PokemonViewModel by viewModels()
         setContent {
             Pokedex2024Theme {
-                SharedTransitionScope {
-                    AnimatedVisibility(true, label = "") {
+                val navController = rememberNavController()
+                SharedTransitionLayout {
+                    CompositionLocalProvider(
+                        LocalSharedTransitionScope provides this
+                    ) {
+                        AnimatedVisibility(true, label = "") {
+                            Surface(
+                                modifier = Modifier.fillMaxSize(),
+                                color = MaterialTheme.colorScheme.background
+                            ) {
+                                NavHost(
+                                    navController = navController,
+                                    startDestination = "Home"
+                                ) {
+                                    composableWithCompositionLocal(
+                                        route = "Home"
+                                    ) { backStackEntry ->
+                                        HomeView(
+                                            viewModel, navController
+                                        )
+                                    }
+                                    composableWithCompositionLocal(
+                                        "PokedexDetailsView/{name}/?{imgUrl}",
+                                        arguments = listOf(
+                                            navArgument("name") { type = NavType.StringType },
+                                            navArgument("imgUrl") { type = NavType.StringType }
+                                        ),
 
-                        Surface(
-                            modifier = Modifier.fillMaxSize(),
-                            color = MaterialTheme.colorScheme.background
-                        ) {
-                            NavManager(viewModel = viewModel, animatedVisibilityScope = this)
+                                        ) { backStackEntry ->
+                                        val arguments = requireNotNull(backStackEntry.arguments)
+                                        val name = arguments.getString("name") ?: ""
+                                        val imgUrl = arguments.getString("imgUrl") ?: ""
+                                        PokedexDetailsView(
+                                            viewModel,
+                                            navController,
+                                            name,
+                                            imgUrl
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
 
                 }
             }
-        }
-    }
-
-    @Composable
-    fun Greeting(name: String, modifier: Modifier = Modifier) {
-        Text(
-            text = "Hello $name!",
-            modifier = modifier
-        )
-    }
-
-    @Preview(showBackground = true)
-    @Composable
-    fun GreetingPreview() {
-        Pokedex2024Theme {
-            Greeting("Android")
         }
     }
 }

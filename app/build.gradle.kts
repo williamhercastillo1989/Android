@@ -1,7 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
-
+    alias(libs.plugins.compose)
     id("kotlin-kapt")
     id("com.google.dagger.hilt.android")
 }
@@ -13,7 +13,7 @@ android {
     defaultConfig {
         applicationId = "com.example.pokedex2024"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -45,28 +45,37 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1"
     }
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
+    packaging.resources {
+        // Multiple dependency bring these files in. Exclude them to enable
+        // our test APK to build (has no effect on our AARs)
+        excludes += "/META-INF/AL2.0"
+        excludes += "/META-INF/LGPL2.1"
     }
 }
 
 dependencies {
+    val paging_version = "3.3.2"
+    //Paging
+    implementation(libs.androidx.paging.common.android)
+    // optional - Jetpack Compose integration
+    implementation("androidx.paging:paging-compose:$paging_version")
 
+    implementation(libs.androidx.paging.runtime)
     //Dagger Hilt
-
     implementation(libs.hilt.android)
+    //Navigation
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.navigation.runtime.ktx)
     kapt(libs.hilt.compiler)
+
     // Retrofit
     implementation(libs.converter.gson)
 
     //Coil
     implementation(libs.coil.compose)
+
     //Pallete
-    implementation("androidx.palette:palette:1.0.0")
+    implementation(libs.androidx.palette)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
