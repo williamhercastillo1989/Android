@@ -3,5 +3,5 @@
 
 ## Screenshots
 
-|<img src="screenshots/screentshot1.jpg" width=200/>|<img src="screenshots/screentshot2.jpg" width=200/>|<img src="screenshots/screentshot3.jpg" width=200/>|
+|<img src="screenshots/screen1.jpg" width=200/>|<img src="screenshots/screen2.jpg" width=200/>|<img src="screenshots/screen3.jpg" width=200/>|
 |:----:|:----:|
